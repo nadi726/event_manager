@@ -13,6 +13,10 @@
     Please consider reaching out to your following representatives:
   </p>
 
+  <% if !phone.nil? %>
+    <p>We will contact you at phone number <%= phone %></p>
+  <% end %>
+
   <table>
     <% if legislators.kind_of?(Array) %>
       <tr><th>Name</th><th>Website</th></tr>
