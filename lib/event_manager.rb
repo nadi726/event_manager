@@ -1,6 +1,8 @@
 require 'csv'
-require 'google/apis/civicinfo_v2'
 require 'erb'
+require 'time'
+require 'google/apis/civicinfo_v2'
+
 
 def clean_phone_number(num)
   if num.nil?
@@ -17,6 +19,18 @@ def clean_phone_number(num)
       num = nil
   end
   num
+end
+
+def get_registration_hour(time_str)
+  return if time_str.nil?
+  begin
+    time_object = Time.strptime(time_str, "%m/%d/%y %H:%M")
+  rescue
+    return
+  end
+  # round to nearest hour
+  time_object += 30 * 60 + 30
+  time_object.hour
 end
 
 def clean_zipcode(zipcode)
@@ -48,6 +62,10 @@ def save_thank_you_letter(id,form_letter)
   end
 end
 
+def get_top_hours(hours, top=5)
+  hours.sort_by {|k, v| -v}.take top
+end
+
 puts 'EventManager initialized.'
 
 contents = CSV.open(
@@ -58,6 +76,7 @@ contents = CSV.open(
 
 template_letter = File.read('form_letter.erb')
 erb_template = ERB.new template_letter
+registration_hours = Hash.new(0)
 
 contents.each do |row|
   id = row[0]
@@ -65,8 +84,16 @@ contents.each do |row|
   zipcode = clean_zipcode(row[:zipcode])
   legislators = legislators_by_zipcode(zipcode)
   phone = clean_phone_number(row[:homephone])
+  registration_hour = get_registration_hour(row[:regdate])
+  registration_hours[registration_hour] += 1
 
   form_letter = erb_template.result(binding)
 
   save_thank_you_letter(id,form_letter)
+end
+
+puts "\nDone."
+puts "Top registration hours:"
+get_top_hours(registration_hours).each do |k, v|
+  puts "At #{k}, #{v} people registered"
 end
